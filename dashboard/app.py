@@ -9,6 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -22,13 +23,15 @@ if not st.session_state.authenticated:
 
     if st.button("Login"):
 
-      if "auth" not in st.secrets:
-         st.error("The deployed app is not receiving the [auth] secret.")
-         st.stop()
-         auth = st.secrets["auth"]
+        if "auth" not in st.secrets:
+            st.error("Authentication settings are not available.")
+            st.stop()
+
+        auth = st.secrets["auth"]
+
         if (
-            username == auth.get("username")
-            and password == auth.get("password")
+            username == auth["username"]
+            and password == auth["password"]
         ):
             st.session_state.authenticated = True
             st.success("Login successful!")
@@ -37,6 +40,9 @@ if not st.session_state.authenticated:
             st.error("Invalid username or password.")
 
     st.stop()
+
+st.title("📊 Big Data Processing & Analytics Pipeline")
+st.subheader("India Sales Analytics Dashboard")
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
 
