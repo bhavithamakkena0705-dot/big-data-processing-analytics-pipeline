@@ -154,3 +154,100 @@ st.caption(
     "Big Data Processing & Analytics Pipeline | "
     "PySpark + Python + Pandas + Streamlit + Plotly"
 )
+
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, r2_score
+
+st.markdown("---")
+st.header("🤖 Machine Learning - Sales Prediction")
+
+ml_files = glob.glob("data/ingestion/sales_data.csv")
+
+if ml_files:
+
+    ml_df = pd.read_csv(ml_files[0])
+
+    ml_df["Date"] = pd.to_datetime(ml_df["Date"])
+
+    # Convert Date into numerical Day value
+    ml_df["Day"] = (
+        ml_df["Date"] - ml_df["Date"].min()
+    ).dt.days
+
+    # Features and target
+    X = ml_df[["Day", "Quantity"]]
+    y = ml_df["Sales"]
+
+    # Linear Regression model
+    model = LinearRegression()
+    model.fit(X, y)
+
+    # Predictions
+    ml_df["Predicted_Sales"] = model.predict(X)
+
+    # Model evaluation
+    mae = mean_absolute_error(
+        ml_df["Sales"],
+        ml_df["Predicted_Sales"]
+    )
+
+    r2 = r2_score(
+        ml_df["Sales"],
+        ml_df["Predicted_Sales"]
+    )
+
+    # Metrics
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric(
+            "Mean Absolute Error",
+            f"₹{mae:,.2f}"
+        )
+
+    with col2:
+        st.metric(
+            "R² Score",
+            f"{r2:.2f}"
+        )
+
+    # Actual vs Predicted chart
+    fig_ml = px.line(
+        ml_df,
+        x="Date",
+        y=["Sales", "Predicted_Sales"],
+        markers=True,
+        title="Actual Sales vs Predicted Sales"
+    )
+
+    fig_ml.update_layout(
+        xaxis_title="Date",
+        yaxis_title="Sales",
+        legend_title="Values"
+    )
+
+    st.plotly_chart(
+        fig_ml,
+        use_container_width=True
+    )
+
+    # Prediction table
+    st.subheader("📋 Sales Prediction Results")
+
+    st.dataframe(
+        ml_df[
+            [
+                "Date",
+                "Sales",
+                "Quantity",
+                "Predicted_Sales"
+            ]
+        ],
+        use_container_width=True
+    )
+
+else:
+
+    st.warning(
+        "Sales dataset for Machine Learning is not available."
+    )
