@@ -36,7 +36,6 @@ if not st.session_state.authenticated:
 
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
-```
 
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
