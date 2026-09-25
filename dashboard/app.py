@@ -251,3 +251,19 @@ else:
     st.warning(
         "Sales dataset for Machine Learning is not available."
     )
+    
+prediction_csv = ml_df[
+    [
+        "Date",
+        "Sales",
+        "Quantity",
+        "Predicted_Sales"
+    ]
+].to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="📥 Download ML Prediction Report",
+    data=prediction_csv,
+    file_name="sales_prediction_report.csv",
+    mime="text/csv"
+)
