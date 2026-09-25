@@ -25,7 +25,7 @@ if not st.session_state.authenticated:
       if "auth" not in st.secrets:
     st.error("The deployed app is not receiving the [auth] secret.")
     st.stop()
-
+   auth = st.secrets["auth"]
         if (
             username == auth.get("username")
             and password == auth.get("password")
