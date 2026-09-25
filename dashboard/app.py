@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-if not st.session_state["authenticated"]:
+if not st.session_state.get("authenticated", False):
 
     st.title("🔐 Secure Login")
     st.write("Please login to access the Big Data Analytics Dashboard.")
