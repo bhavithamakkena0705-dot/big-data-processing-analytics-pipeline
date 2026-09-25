@@ -9,7 +9,6 @@ st.set_page_config(
     layout="wide"
 )
 
-
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -41,10 +40,6 @@ if not st.session_state.authenticated:
 
     st.stop()
 
-st.title("📊 Big Data Processing & Analytics Pipeline")
-st.subheader("India Sales Analytics Dashboard")
-st.title("📊 Big Data Processing & Analytics Pipeline")
-st.subheader("India Sales Analytics Dashboard")
 
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
@@ -58,13 +53,13 @@ if not state_files or not category_files:
 
 state_df = pd.read_csv(state_files[0])
 category_df = pd.read_csv(category_files[0])
+
 if st.sidebar.button("🚪 Logout"):
     st.session_state.authenticated = False
     st.rerun()
 
 st.sidebar.header("🔎 Filters")
-
-st.sidebar.header("🔎 Dashboard Controls")
+st.sidebar.header("🎛️ Dashboard Controls")
 
 states = ["All States"] + sorted(state_df["State"].unique().tolist())
 selected_state = st.sidebar.radio("Select State", states)
