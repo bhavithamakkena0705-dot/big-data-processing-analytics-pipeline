@@ -1,7 +1,15 @@
+```python
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import glob
+
+st.set_page_config(
+    page_title="Big Data Analytics Dashboard",
+    page_icon="📊",
+    layout="wide"
+)
+
 # -----------------------------
 # Basic Authentication
 # -----------------------------
@@ -29,11 +37,10 @@ if not st.session_state.authenticated:
             st.error("Invalid username or password.")
 
     st.stop()
-st.set_page_config(
-    page_title="Big Data Analytics Dashboard",
-    page_icon="📊",
-    layout="wide"
-)
+
+st.title("📊 Big Data Processing & Analytics Pipeline")
+st.subheader("India Sales Analytics Dashboard")
+```
 
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
