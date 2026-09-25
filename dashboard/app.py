@@ -47,6 +47,11 @@ if not state_files or not category_files:
 
 state_df = pd.read_csv(state_files[0])
 category_df = pd.read_csv(category_files[0])
+if st.sidebar.button("🚪 Logout"):
+    st.session_state.authenticated = False
+    st.rerun()
+
+st.sidebar.header("🔎 Filters")
 
 st.sidebar.header("🔎 Dashboard Controls")
 
