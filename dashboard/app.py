@@ -1,9 +1,7 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import glob
-import os
 
 st.set_page_config(
     page_title="Big Data Analytics Dashboard",
@@ -12,186 +10,118 @@ st.set_page_config(
 )
 
 st.title("📊 Big Data Processing & Analytics Pipeline")
-st.subheader("Sales Analytics Dashboard")
+st.subheader("India Sales Analytics Dashboard")
 
-# -----------------------------
-# Load Processed Data
-# -----------------------------
-state_files = glob.glob(
-    "data/processed/state_sales/*.csv"
-)
+state_files = glob.glob("data/processed/state_sales/*.csv")
+category_files = glob.glob("data/processed/category_sales/*.csv")
 
-category_files = glob.glob(
-    "data/processed/category_sales/*.csv"
-)
-
-if not city_files or not product_files:
+if not state_files or not category_files:
     st.error("Processed data files are not available.")
     st.stop()
 
-city_df = pd.read_csv(city_files[0])
-product_df = pd.read_csv(product_files[0])
+state_df = pd.read_csv(state_files[0])
+category_df = pd.read_csv(category_files[0])
 
-# -----------------------------
-# Sidebar Filters
-# -----------------------------
-st.sidebar.header("🔎 Filters")
+st.sidebar.header("🔎 Dashboard Controls")
 
-cities = ["All Cities"] + sorted(city_df["City"].unique().tolist())
-selected_city = st.sidebar.radio("Select City", cities)
+states = ["All States"] + sorted(state_df["State"].unique().tolist())
+selected_state = st.sidebar.radio("Select State", states)
 
-products = ["All Products"] + sorted(product_df["Product"].unique().tolist())
-selected_product = st.sidebar.radio("Select Product", products)
-
-# -----------------------------
-# Apply Filters
-# -----------------------------
-filtered_city = city_df.copy()
-filtered_product = product_df.copy()
-
-if selected_city != "All Cities":
-    filtered_city = filtered_city[
-        filtered_city["City"] == selected_city
+filtered_state = state_df.copy()
+if selected_state != "All States":
+    filtered_state = filtered_state[
+        filtered_state["State"] == selected_state
     ]
 
-if selected_product != "All Products":
-    filtered_product = filtered_product[
-        filtered_product["Product"] == selected_product
-    ]
-
-# -----------------------------
-# KPI Metrics
-# -----------------------------
-total_sales = filtered_city["Total_Sales"].sum()
-total_cities = len(filtered_city)
-total_products = len(filtered_product)
+total_sales = filtered_state["Total_Sales"].sum()
+total_states = len(filtered_state)
+total_categories = len(category_df)
 
 col1, col2, col3 = st.columns(3)
-
-col1.metric("💰 Total Sales", f"₹{total_sales:,.0f}")
-col2.metric("🏙️ Cities", total_cities)
-col3.metric("📦 Products", total_products)
+col1.metric("💰 Total Sales", f"₹{total_sales:,.2f}")
+col2.metric("🇮🇳 States", total_states)
+col3.metric("📦 Categories", total_categories)
 
 st.divider()
 
-# -----------------------------
-# City-wise Sales
-# -----------------------------
-st.subheader("🏙️ City-wise Sales")
-
+st.subheader("📍 State-wise Sales")
 col1, col2 = st.columns(2)
 
 with col1:
-    fig_city = px.bar(
-        filtered_city,
-        x="City",
+    fig_state = px.bar(
+        filtered_state,
+        x="State",
         y="Total_Sales",
-        title="Sales by City",
-        text="Total_Sales"
+        title="Sales by State",
+        text_auto=".2s"
     )
-    st.plotly_chart(fig_city, use_container_width=True)
+    fig_state.update_layout(
+        xaxis_title="State",
+        yaxis_title="Sales (₹)"
+    )
+    st.plotly_chart(fig_state, use_container_width=True)
 
 with col2:
-    st.dataframe(
-        filtered_city,
-        use_container_width=True,
-        hide_index=True
+    display_state = filtered_state.copy()
+    display_state["Total_Sales"] = display_state["Total_Sales"].map(
+        lambda x: f"₹{x:,.2f}"
     )
+    st.dataframe(display_state, use_container_width=True, hide_index=True)
 
 st.download_button(
-    "⬇️ Download City Sales Report",
-    filtered_city.to_csv(index=False),
-    "city_sales_report.csv",
+    "⬇️ Download State Sales Report",
+    filtered_state.to_csv(index=False),
+    "state_sales_report.csv",
     "text/csv"
 )
 
 st.divider()
 
-# -----------------------------
-# Product-wise Sales
-# -----------------------------
-st.subheader("📦 Product-wise Sales")
-
+st.subheader("📦 Category-wise Sales")
 col1, col2 = st.columns(2)
 
 with col1:
-    fig_product = px.bar(
-        filtered_product,
-        x="Product",
+    fig_category = px.bar(
+        category_df,
+        x="Category",
         y="Total_Sales",
-        title="Sales by Product",
-        text="Total_Sales"
+        title="Sales by Category",
+        text_auto=".2s"
     )
-    st.plotly_chart(fig_product, use_container_width=True)
+    fig_category.update_layout(
+        xaxis_title="Category",
+        yaxis_title="Sales (₹)"
+    )
+    st.plotly_chart(fig_category, use_container_width=True)
 
 with col2:
-    st.dataframe(
-        filtered_product,
-        use_container_width=True,
-        hide_index=True
+    display_category = category_df.copy()
+    display_category["Total_Sales"] = display_category["Total_Sales"].map(
+        lambda x: f"₹{x:,.2f}"
     )
+    st.dataframe(display_category, use_container_width=True, hide_index=True)
 
 st.download_button(
-    "⬇️ Download Product Sales Report",
-    filtered_product.to_csv(index=False),
-    "product_sales_report.csv",
+    "⬇️ Download Category Sales Report",
+    category_df.to_csv(index=False),
+    "category_sales_report.csv",
     "text/csv"
 )
 
 st.divider()
 
-# -----------------------------
-# Sales Trend
-# -----------------------------
-st.subheader("📈 Sales Trend")
-
-ingestion_file = "big_data_pipeline/data/ingestion/sales_data.csv"
-
-if os.path.exists(ingestion_file):
-    sales_df = pd.read_csv(ingestion_file)
-
-    sales_df["Date"] = pd.to_datetime(sales_df["Date"])
-
-    if selected_city != "All Cities":
-        sales_df = sales_df[
-            sales_df["City"] == selected_city
-        ]
-
-    if selected_product != "All Products":
-        sales_df = sales_df[
-            sales_df["Product"] == selected_product
-        ]
-
-    fig_trend = px.line(
-        sales_df,
-        x="Date",
-        y="Sales",
-        markers=True,
-        title="Daily Sales Trend"
-    )
-
-    st.plotly_chart(fig_trend, use_container_width=True)
-
-# -----------------------------
-# Product Distribution
-# -----------------------------
-st.subheader("🥧 Product Sales Distribution")
+st.subheader("🥧 Category Sales Distribution")
 
 fig_pie = px.pie(
-    filtered_product,
-    names="Product",
+    category_df,
+    names="Category",
     values="Total_Sales",
-    title="Product Sales Distribution"
+    title="Category Sales Distribution"
 )
-
 st.plotly_chart(fig_pie, use_container_width=True)
 
-# -----------------------------
-# Footer
-# -----------------------------
 st.divider()
-
 st.caption(
     "Big Data Processing & Analytics Pipeline | "
-    "PySpark + Python + Streamlit + Plotly"
+    "PySpark + Python + Pandas + Streamlit + Plotly"
 )
