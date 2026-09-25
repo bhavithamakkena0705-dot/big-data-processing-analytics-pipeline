@@ -9,9 +9,6 @@ st.set_page_config(
     layout="wide"
 )
 
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-
 if not st.session_state.authenticated:
 
     st.title("🔐 Secure Login")
@@ -22,15 +19,11 @@ if not st.session_state.authenticated:
 
     if st.button("Login"):
 
-        if "auth" not in st.secrets:
-            st.error("Authentication settings are not available.")
-            st.stop()
-
-        auth = st.secrets["auth"]
-
-        if (
-            username == auth["username"]
-            and password == auth["password"]
+        if "username" not in st.secrets or "password" not in st.secrets:
+            st.error("Login settings are not configured.")
+        elif (
+            username == st.secrets["username"]
+            and password == st.secrets["password"]
         ):
             st.session_state.authenticated = True
             st.success("Login successful!")
