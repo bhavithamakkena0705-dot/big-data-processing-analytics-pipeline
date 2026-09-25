@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-if not st.session_state.authenticated:
+if not st.session_state["authenticated"]:
 
     st.title("🔐 Secure Login")
     st.write("Please login to access the Big Data Analytics Dashboard.")
@@ -25,14 +25,13 @@ if not st.session_state.authenticated:
             username == st.secrets["username"]
             and password == st.secrets["password"]
         ):
-            st.session_state.authenticated = True
+            st.session_state["authenticated"] = True
             st.success("Login successful!")
             st.rerun()
         else:
             st.error("Invalid username or password.")
 
     st.stop()
-
 
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
