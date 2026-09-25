@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -10,9 +9,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# -----------------------------
-# Basic Authentication
-# -----------------------------
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
