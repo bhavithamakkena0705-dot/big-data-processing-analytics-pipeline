@@ -17,12 +17,12 @@ st.subheader("Sales Analytics Dashboard")
 # -----------------------------
 # Load Processed Data
 # -----------------------------
-city_files = glob.glob(
-    "big_data_pipeline/data/processed/city_sales/*.csv"
+state_files = glob.glob(
+    "data/processed/state_sales/*.csv"
 )
 
-product_files = glob.glob(
-    "big_data_pipeline/data/processed/product_sales/*.csv"
+category_files = glob.glob(
+    "data/processed/category_sales/*.csv"
 )
 
 if not city_files or not product_files:
