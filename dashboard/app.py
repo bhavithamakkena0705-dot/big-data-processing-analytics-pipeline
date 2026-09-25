@@ -22,11 +22,9 @@ if not st.session_state.authenticated:
 
     if st.button("Login"):
 
-        auth = st.secrets.get("auth")
-
-        if auth is None:
-            st.error("Authentication settings are not available.")
-            st.stop()
+      if "auth" not in st.secrets:
+    st.error("The deployed app is not receiving the [auth] secret.")
+    st.stop()
 
         if (
             username == auth.get("username")
