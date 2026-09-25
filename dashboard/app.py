@@ -2,7 +2,33 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import glob
+# -----------------------------
+# Basic Authentication
+# -----------------------------
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
 
+if not st.session_state.authenticated:
+
+    st.title("🔐 Secure Login")
+    st.write("Please login to access the Big Data Analytics Dashboard.")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+
+        if (
+            username == st.secrets["auth"]["username"]
+            and password == st.secrets["auth"]["password"]
+        ):
+            st.session_state.authenticated = True
+            st.success("Login successful!")
+            st.rerun()
+        else:
+            st.error("Invalid username or password.")
+
+    st.stop()
 st.set_page_config(
     page_title="Big Data Analytics Dashboard",
     page_icon="📊",
