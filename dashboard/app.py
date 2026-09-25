@@ -22,9 +22,15 @@ if not st.session_state.authenticated:
 
     if st.button("Login"):
 
+        auth = st.secrets.get("auth")
+
+        if auth is None:
+            st.error("Authentication settings are not available.")
+            st.stop()
+
         if (
-            username == st.secrets["auth"]["username"]
-            and password == st.secrets["auth"]["password"]
+            username == auth.get("username")
+            and password == auth.get("password")
         ):
             st.session_state.authenticated = True
             st.success("Login successful!")
@@ -33,7 +39,6 @@ if not st.session_state.authenticated:
             st.error("Invalid username or password.")
 
     st.stop()
-
 st.title("📊 Big Data Processing & Analytics Pipeline")
 st.subheader("India Sales Analytics Dashboard")
 
