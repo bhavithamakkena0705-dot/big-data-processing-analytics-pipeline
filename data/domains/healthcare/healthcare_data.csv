@@ -1,0 +1,9 @@
+Patient_ID,Department,Age,Visits,Treatment_Cost,Length_of_Stay
+201,Cardiology,45,3,25000,2
+202,General,32,2,8000,1
+203,Orthopedics,56,4,18000,4
+204,Cardiology,67,8,65000,10
+205,General,28,1,5000,1
+206,Neurology,61,6,42000,7
+207,Orthopedics,40,3,15000,3
+208,General,35,2,9000,2

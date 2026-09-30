@@ -1,0 +1,9 @@
+Student_ID,Student_Name,Class,Subject,Marks,Attendance
+101,Student_A,CSE-A,Python,85,92
+102,Student_B,CSE-A,Python,78,88
+103,Student_C,CSE-A,Java,92,95
+104,Student_D,CSE-A,Java,45,60
+105,Student_E,CSE-B,Python,88,90
+106,Student_F,CSE-B,Java,35,52
+107,Student_G,CSE-B,Python,96,98
+108,Student_H,CSE-B,Java,82,85

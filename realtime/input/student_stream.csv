@@ -1,0 +1,37 @@
+Student_ID,Branch,Year,Subject,Marks,Attendance
+ST007,ECE,3,Python,50,88
+ST001,CSE,3,Big Data,74,77
+ST007,ECE,3,Python,57,76
+ST008,CSE,3,Big Data,67,81
+ST001,CSE,3,Big Data,62,71
+ST002,CSE,3,Big Data,63,90
+ST006,CSE,3,Python,63,64
+ST003,ECE,3,Cloud Computing,86,81
+ST005,ECE,3,Big Data,81,81
+ST003,ECE,3,Cloud Computing,51,96
+ST002,CSE,3,Big Data,49,50
+ST004,CSE,3,Cloud Computing,35,60
+ST004,CSE,3,Cloud Computing,71,83
+ST004,CSE,3,Cloud Computing,43,68
+ST005,ECE,3,Big Data,57,71
+ST006,CSE,3,Python,46,54
+ST006,CSE,3,Python,57,95
+ST003,ECE,3,Cloud Computing,78,86
+ST003,ECE,3,Cloud Computing,66,85
+ST008,CSE,3,Big Data,50,78
+ST008,CSE,3,Big Data,95,53
+ST003,ECE,3,Cloud Computing,80,90
+ST002,CSE,3,Big Data,72,97
+ST007,ECE,3,Python,78,84
+ST004,CSE,3,Cloud Computing,71,87
+ST004,CSE,3,Cloud Computing,38,62
+ST003,ECE,3,Cloud Computing,62,74
+ST003,ECE,3,Cloud Computing,42,68
+ST005,ECE,3,Big Data,44,98
+ST002,CSE,3,Big Data,82,62
+ST001,CSE,3,Big Data,66,87
+ST008,CSE,3,Big Data,65,53
+ST003,ECE,3,Cloud Computing,69,59
+ST005,ECE,3,Big Data,53,54
+ST007,ECE,3,Python,69,69
+ST001,CSE,3,Big Data,60,95
