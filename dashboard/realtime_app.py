@@ -1,5 +1,6 @@
 
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import os
 import glob
@@ -10,6 +11,8 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
+
+st_autorefresh(interval=3000, key="realtime_refresh")
 
 st.title("📊 Real-Time Student Analytics Dashboard")
 st.subheader("Live Education Data Processing & Intelligent Insights")
