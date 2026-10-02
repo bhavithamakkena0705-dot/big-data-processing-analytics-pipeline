@@ -82,7 +82,7 @@ def show_home():
 
     st.markdown("---")
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         st.markdown("""
@@ -95,7 +95,12 @@ def show_home():
             </div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("Open Healthcare Dashboard", key="home_health", use_container_width=True):
+
+        if st.button(
+            "Open Healthcare Dashboard",
+            key="home_health",
+            use_container_width=True
+        ):
             open_domain("healthcare")
             st.rerun()
 
@@ -110,7 +115,12 @@ def show_home():
             </div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("Open Retail Dashboard", key="home_retail", use_container_width=True):
+
+        if st.button(
+            "Open Retail Dashboard",
+            key="home_retail",
+            use_container_width=True
+        ):
             open_domain("retail")
             st.rerun()
 
@@ -125,15 +135,41 @@ def show_home():
             </div>
         </div>
         """, unsafe_allow_html=True)
-        if st.button("Open Education Dashboard", key="home_education", use_container_width=True):
+
+        if st.button(
+            "Open Education Dashboard",
+            key="home_education",
+            use_container_width=True
+        ):
             open_domain("education")
+            st.rerun()
+
+    with c4:
+        st.markdown("""
+        <div class="domain-card">
+            <div class="domain-icon">🏦</div>
+            <div class="domain-title">Banking Domain</div>
+            <div class="domain-text">
+                Transaction analytics, deposits and withdrawals,
+                customer activity, loan analysis, anomaly detection
+                and nearby bank identification.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        if st.button(
+            "Open Banking Dashboard",
+            key="home_banking",
+            use_container_width=True
+        ):
+            open_domain("banking")
             st.rerun()
 
     st.markdown("---")
     st.info(
         "Pipeline capabilities: Apache Spark processing • Multi-domain analytics • "
         "Automatic anomaly detection • Key-record identification • Intelligent insights • "
-        "Real-time updates • CSV dataset analysis"
+        "Real-time updates • CSV dataset analysis • Location-based banking search"
     )
 
 # ============================================================
@@ -509,6 +545,558 @@ def show_retail():
     except Exception as e:
         st.error(f"Retail analytics error: {e}")
 
+
+# ============================================================
+# BANKING DASHBOARD
+# ============================================================
+
+def show_banking():
+    st.title("🏦 Banking Big Data Analytics Dashboard")
+    st.subheader(
+        "Transaction Analytics • Customer Intelligence • "
+        "Anomaly Detection • Location-Based Bank Identification"
+    )
+
+    banking_file = (
+        "/content/big_data_project/"
+        "data/domains/banking/banking_data.csv"
+    )
+
+    try:
+        banking_df = pd.read_csv(banking_file)
+    except Exception as e:
+        st.error(f"Unable to load banking dataset: {e}")
+        return
+
+    banking_df["Date"] = pd.to_datetime(
+        banking_df["Date"], errors="coerce"
+    )
+
+    banking_df["Transaction_Amount"] = pd.to_numeric(
+        banking_df["Transaction_Amount"], errors="coerce"
+    ).fillna(0)
+
+    banking_df["Loan_Amount"] = pd.to_numeric(
+        banking_df["Loan_Amount"], errors="coerce"
+    ).fillna(0)
+
+    # --------------------------------------------------------
+    # FILTERS
+    # --------------------------------------------------------
+
+    st.markdown("### 🔎 Banking Filters")
+
+    f1, f2, f3, f4 = st.columns(4)
+
+    with f1:
+        account_types = ["All"] + sorted(
+            banking_df["Account_Type"].dropna().unique().tolist()
+        )
+        selected_account = st.selectbox(
+            "Account Type",
+            account_types,
+            key="bank_account_filter"
+        )
+
+    with f2:
+        transaction_types = ["All"] + sorted(
+            banking_df["Transaction_Type"].dropna().unique().tolist()
+        )
+        selected_transaction = st.selectbox(
+            "Transaction Type",
+            transaction_types,
+            key="bank_transaction_filter"
+        )
+
+    with f3:
+        cities = ["All"] + sorted(
+            banking_df["City"].dropna().unique().tolist()
+        )
+        selected_city = st.selectbox(
+            "City / Branch",
+            cities,
+            key="bank_city_filter"
+        )
+
+    with f4:
+        categories = ["All"] + sorted(
+            banking_df["Customer_Category"].dropna().unique().tolist()
+        )
+        selected_category = st.selectbox(
+            "Customer Category",
+            categories,
+            key="bank_category_filter"
+        )
+
+    filtered_df = banking_df.copy()
+
+    if selected_account != "All":
+        filtered_df = filtered_df[
+            filtered_df["Account_Type"] == selected_account
+        ]
+
+    if selected_transaction != "All":
+        filtered_df = filtered_df[
+            filtered_df["Transaction_Type"] == selected_transaction
+        ]
+
+    if selected_city != "All":
+        filtered_df = filtered_df[
+            filtered_df["City"] == selected_city
+        ]
+
+    if selected_category != "All":
+        filtered_df = filtered_df[
+            filtered_df["Customer_Category"] == selected_category
+        ]
+
+    # --------------------------------------------------------
+    # DATE FILTER
+    # --------------------------------------------------------
+
+    if not filtered_df.empty:
+        min_date = filtered_df["Date"].min().date()
+        max_date = filtered_df["Date"].max().date()
+
+        date_range = st.date_input(
+            "Transaction Date Range",
+            value=(min_date, max_date),
+            min_value=min_date,
+            max_value=max_date,
+            key="bank_date_filter"
+        )
+
+        if isinstance(date_range, tuple) and len(date_range) == 2:
+            start_date, end_date = date_range
+
+            filtered_df = filtered_df[
+                (filtered_df["Date"].dt.date >= start_date)
+                & (filtered_df["Date"].dt.date <= end_date)
+            ]
+
+    st.markdown("---")
+
+    # --------------------------------------------------------
+    # KEY METRICS
+    # --------------------------------------------------------
+
+    total_customers = filtered_df["Customer_ID"].nunique()
+    total_accounts = len(filtered_df)
+    total_transactions = len(filtered_df)
+    total_amount = filtered_df["Transaction_Amount"].sum()
+
+    avg_transaction = (
+        filtered_df["Transaction_Amount"].mean()
+        if not filtered_df.empty else 0
+    )
+
+    deposits = filtered_df.loc[
+        filtered_df["Transaction_Type"] == "Deposit",
+        "Transaction_Amount"
+    ].sum()
+
+    withdrawals = filtered_df.loc[
+        filtered_df["Transaction_Type"] == "Withdrawal",
+        "Transaction_Amount"
+    ].sum()
+
+    total_loans = filtered_df["Loan_Amount"].sum()
+
+    active_accounts = (
+        filtered_df["Account_Status"] == "Active"
+    ).sum()
+
+    inactive_accounts = (
+        filtered_df["Account_Status"] == "Inactive"
+    ).sum()
+
+    m1, m2, m3, m4 = st.columns(4)
+
+    m1.metric("👥 Total Customers", total_customers)
+    m2.metric("🏦 Total Accounts", total_accounts)
+    m3.metric("💳 Transactions", total_transactions)
+    m4.metric("💰 Transaction Amount", f"₹{total_amount:,.0f}")
+
+    m5, m6, m7, m8 = st.columns(4)
+
+    m5.metric("📊 Avg Transaction", f"₹{avg_transaction:,.0f}")
+    m6.metric("📥 Deposits", f"₹{deposits:,.0f}")
+    m7.metric("📤 Withdrawals", f"₹{withdrawals:,.0f}")
+    m8.metric("💵 Loan Amount", f"₹{total_loans:,.0f}")
+
+    m9, m10 = st.columns(2)
+
+    m9.metric("🟢 Active Accounts", active_accounts)
+    m10.metric("🔴 Inactive Accounts", inactive_accounts)
+
+    st.markdown("---")
+
+    # --------------------------------------------------------
+    # CHARTS
+    # --------------------------------------------------------
+
+    st.markdown("### 📈 Banking Analytics")
+
+    chart1, chart2 = st.columns(2)
+
+    with chart1:
+        daily_transactions = (
+            filtered_df.groupby("Date")
+            .agg(Transaction_Amount=("Transaction_Amount", "sum"))
+            .reset_index()
+        )
+
+        fig = px.line(
+            daily_transactions,
+            x="Date",
+            y="Transaction_Amount",
+            markers=True,
+            title="Transactions by Date"
+        )
+        fig.update_layout(
+            xaxis_title="Date",
+            yaxis_title="Transaction Amount"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with chart2:
+        transaction_summary = (
+            filtered_df.groupby("Transaction_Type")
+            ["Transaction_Amount"]
+            .sum()
+            .reset_index()
+        )
+
+        fig = px.bar(
+            transaction_summary,
+            x="Transaction_Type",
+            y="Transaction_Amount",
+            title="Deposits vs Withdrawals",
+            text_auto=True
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    chart3, chart4 = st.columns(2)
+
+    with chart3:
+        account_summary = (
+            filtered_df.groupby("Account_Type")
+            ["Transaction_Amount"]
+            .sum()
+            .reset_index()
+        )
+
+        fig = px.bar(
+            account_summary,
+            x="Account_Type",
+            y="Transaction_Amount",
+            title="Transactions by Account Type",
+            text_auto=True
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with chart4:
+        city_summary = (
+            filtered_df.groupby("City")
+            ["Transaction_Amount"]
+            .sum()
+            .reset_index()
+            .sort_values("Transaction_Amount", ascending=False)
+        )
+
+        fig = px.bar(
+            city_summary,
+            x="City",
+            y="Transaction_Amount",
+            title="Transactions by City",
+            text_auto=True
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    chart5, chart6 = st.columns(2)
+
+    with chart5:
+        loan_summary = (
+            filtered_df.groupby("City")
+            ["Loan_Amount"]
+            .sum()
+            .reset_index()
+        )
+
+        fig = px.pie(
+            loan_summary,
+            names="City",
+            values="Loan_Amount",
+            title="Loan Distribution"
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    with chart6:
+        branch_summary = (
+            filtered_df.groupby("Branch")
+            ["Transaction_Amount"]
+            .sum()
+            .reset_index()
+            .sort_values("Transaction_Amount", ascending=False)
+        )
+
+        fig = px.bar(
+            branch_summary,
+            x="Branch",
+            y="Transaction_Amount",
+            title="Branch-wise Transaction Volume",
+            text_auto=True
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+    # --------------------------------------------------------
+    # CUSTOMER ACTIVITY
+    # --------------------------------------------------------
+
+    st.markdown("### 👤 Customer Activity")
+
+    if not filtered_df.empty:
+        customer_activity = (
+            filtered_df.groupby(
+                ["Customer_ID", "Customer_Name"]
+            )
+            .agg(
+                Transactions=("Transaction_ID", "count"),
+                Total_Amount=("Transaction_Amount", "sum")
+            )
+            .reset_index()
+            .sort_values(
+                ["Transactions", "Total_Amount"],
+                ascending=False
+            )
+        )
+
+        st.dataframe(
+            customer_activity,
+            use_container_width=True,
+            hide_index=True
+        )
+
+    # --------------------------------------------------------
+    # ANOMALY DETECTION
+    # --------------------------------------------------------
+
+    st.markdown("### 🚨 Transaction Anomaly Detection")
+
+    anomaly_df = filtered_df.copy()
+
+    if not anomaly_df.empty:
+
+        amount_mean = anomaly_df["Transaction_Amount"].mean()
+        amount_std = anomaly_df["Transaction_Amount"].std()
+
+        if pd.isna(amount_std):
+            amount_std = 0
+
+        high_threshold = amount_mean + amount_std
+
+        def classify_transaction(row):
+            amount = row["Transaction_Amount"]
+
+            if amount >= max(high_threshold, 100000):
+                return "HIGH RISK"
+
+            if amount >= max(amount_mean + (amount_std * 0.5), 75000):
+                return "WARNING"
+
+            return "NORMAL"
+
+        anomaly_df["Risk_Status"] = anomaly_df.apply(
+            classify_transaction,
+            axis=1
+        )
+
+        risk_counts = (
+            anomaly_df["Risk_Status"]
+            .value_counts()
+            .reindex(
+                ["NORMAL", "WARNING", "HIGH RISK"],
+                fill_value=0
+            )
+        )
+
+        r1, r2, r3 = st.columns(3)
+
+        r1.metric("🟢 NORMAL", int(risk_counts["NORMAL"]))
+        r2.metric("🟡 WARNING", int(risk_counts["WARNING"]))
+        r3.metric("🔴 HIGH RISK", int(risk_counts["HIGH RISK"]))
+
+        suspicious = anomaly_df[
+            anomaly_df["Risk_Status"] != "NORMAL"
+        ].sort_values(
+            "Transaction_Amount",
+            ascending=False
+        )
+
+        if not suspicious.empty:
+            st.warning(
+                "Transactions requiring attention were detected."
+            )
+            st.dataframe(
+                suspicious[
+                    [
+                        "Transaction_ID",
+                        "Customer_Name",
+                        "Transaction_Type",
+                        "Transaction_Amount",
+                        "City",
+                        "Branch",
+                        "Risk_Status"
+                    ]
+                ],
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.success(
+                "No warning or high-risk transactions detected."
+            )
+
+    # --------------------------------------------------------
+    # AUTOMATIC INSIGHTS
+    # --------------------------------------------------------
+
+    st.markdown("### 🧠 Automatic Banking Insights")
+
+    if not filtered_df.empty:
+
+        highest_transaction = filtered_df.loc[
+            filtered_df["Transaction_Amount"].idxmax()
+        ]
+
+        lowest_transaction = filtered_df.loc[
+            filtered_df["Transaction_Amount"].idxmin()
+        ]
+
+        most_active_customer = (
+            filtered_df.groupby(
+                ["Customer_ID", "Customer_Name"]
+            )["Transaction_ID"]
+            .count()
+            .sort_values(ascending=False)
+            .index[0]
+        )
+
+        highest_branch = (
+            filtered_df.groupby("Branch")
+            ["Transaction_Amount"]
+            .sum()
+            .sort_values(ascending=False)
+            .index[0]
+        )
+
+        i1, i2 = st.columns(2)
+
+        with i1:
+            st.info(
+                f"💰 Highest Transaction: "
+                f"{highest_transaction['Transaction_ID']} — "
+                f"₹{highest_transaction['Transaction_Amount']:,.0f}"
+            )
+
+            st.info(
+                f"📉 Lowest Transaction: "
+                f"{lowest_transaction['Transaction_ID']} — "
+                f"₹{lowest_transaction['Transaction_Amount']:,.0f}"
+            )
+
+        with i2:
+            st.info(
+                f"👤 Most Active Customer: "
+                f"{most_active_customer[1]} "
+                f"({most_active_customer[0]})"
+            )
+
+            st.info(
+                f"🏦 Highest Transaction Branch: "
+                f"{highest_branch}"
+            )
+
+        high_value = filtered_df[
+            filtered_df["Transaction_Amount"] >= 100000
+        ]
+
+        if not high_value.empty:
+            st.warning(
+                f"⚠️ {len(high_value)} high-value transaction(s) "
+                f"of ₹1,00,000 or above detected."
+            )
+
+        key_record = filtered_df.loc[
+            filtered_df["Transaction_Amount"].idxmax()
+        ]
+
+        st.success(
+            f"⭐ Key Record: {key_record['Transaction_ID']} | "
+            f"Customer: {key_record['Customer_Name']} | "
+            f"Amount: ₹{key_record['Transaction_Amount']:,.0f} | "
+            f"Branch: {key_record['Branch']}"
+        )
+
+    # --------------------------------------------------------
+    # CSV UPLOAD
+    # --------------------------------------------------------
+
+    st.markdown("---")
+    st.markdown("### 📂 Upload Banking CSV")
+
+    uploaded_file = st.file_uploader(
+        "Upload another banking dataset",
+        type=["csv"],
+        key="banking_csv_upload"
+    )
+
+    if uploaded_file is not None:
+
+        uploaded_df = pd.read_csv(uploaded_file)
+
+        st.success(
+            f"Uploaded dataset loaded successfully: "
+            f"{len(uploaded_df)} rows × {len(uploaded_df.columns)} columns"
+        )
+
+        u1, u2, u3 = st.columns(3)
+
+        u1.metric(
+            "Total Rows",
+            len(uploaded_df)
+        )
+
+        u2.metric(
+            "Total Columns",
+            len(uploaded_df.columns)
+        )
+
+        u3.metric(
+            "Missing Values",
+            int(uploaded_df.isnull().sum().sum())
+        )
+
+        st.dataframe(
+            uploaded_df.head(20),
+            use_container_width=True,
+            hide_index=True
+        )
+
+    # --------------------------------------------------------
+    # BACK TO HOME
+    # --------------------------------------------------------
+
+    st.markdown("---")
+
+    if st.button(
+        "⬅️ Back to Domain Selection",
+        key="banking_back_home",
+        use_container_width=True
+    ):
+        go_home()
+        st.rerun()
+
 # ============================================================
 # EDUCATION DASHBOARD
 # ============================================================
@@ -665,6 +1253,8 @@ elif st.session_state.selected_domain == "retail":
     show_retail()
 elif st.session_state.selected_domain == "education":
     show_education()
+elif st.session_state.selected_domain == "banking":
+    show_banking()
 else:
     go_home()
     st.rerun()

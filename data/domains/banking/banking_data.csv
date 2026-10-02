@@ -1,0 +1,13 @@
+Customer_ID,Customer_Name,Account_Type,Transaction_ID,Transaction_Type,Transaction_Amount,City,Branch,Date,Account_Status,Customer_Category,Loan_Amount
+C001,Bhavitha,Savings,TXN1001,Deposit,25000,Kadapa,Main Branch,2026-09-25,Active,Regular,0
+C002,Bhavana,Current,TXN1002,Withdrawal,12000,Ongole,Ongole Main,2026-09-25,Active,Business,50000
+C003,Sharmila,Savings,TXN1003,Deposit,45000,Vijayawada,Benz Circle,2026-09-26,Active,Premium,100000
+C004,Anuradha,Savings,TXN1004,Withdrawal,8000,Guntur,Guntur Main,2026-09-26,Inactive,Regular,0
+C005,Bhavani,Current,TXN1005,Deposit,75000,Nellore,Nellore Main,2026-09-27,Active,Business,150000
+C006,Bhargavi,Savings,TXN1006,Withdrawal,5500,Kadapa,RTC Branch,2026-09-27,Active,Regular,0
+C007,Akshaya,Savings,TXN1007,Deposit,120000,Tirupati,Central Branch,2026-09-28,Active,Premium,200000
+C008,Shirisha,Current,TXN1008,Withdrawal,18000,Ongole,Ongole Main,2026-09-28,Active,Business,75000
+C009,Ishwarya,Savings,TXN1009,Deposit,30000,Kadapa,Main Branch,2026-09-29,Active,Regular,0
+C010,Supriya,Savings,TXN1010,Withdrawal,95000,Vijayawada,Benz Circle,2026-09-29,Active,Premium,120000
+C011,Bhavya,Current,TXN1011,Deposit,65000,Guntur,Guntur Main,2026-09-30,Active,Business,180000
+C012,Priya,Savings,TXN1012,Withdrawal,7000,Nellore,Nellore Main,2026-09-30,Inactive,Regular,0
