@@ -1,3 +1,5 @@
+import requests
+import plotly.express as px
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 import pandas as pd
@@ -26,6 +28,167 @@ def go_home():
 
 def open_domain(domain):
     st.session_state.selected_domain = domain
+
+
+# ============================================================
+# NEARBY BANK SEARCH
+# ============================================================
+
+def search_nearby_banks(location_text, bank_name="", radius=10000):
+    """
+    Find nearby bank branches using OpenStreetMap / Overpass.
+    Returns only information available from the public map data.
+    """
+
+    try:
+        headers = {
+            "User-Agent": "BigDataAnalyticsPipeline/1.0"
+        }
+
+        # ----------------------------------------------------
+        # 1. Convert entered location into latitude/longitude
+        # ----------------------------------------------------
+        geocode_url = "https://nominatim.openstreetmap.org/search"
+
+        # Make location search more reliable
+        clean_location = location_text.strip()
+
+        if "india" not in clean_location.lower():
+            clean_location = f"{clean_location}, India"
+
+        geocode_params = {
+            "q": clean_location,
+            "format": "json",
+            "addressdetails": 1,
+            "limit": 1
+        }
+
+        geocode_response = requests.get(
+            geocode_url,
+            params=geocode_params,
+            headers=headers,
+            timeout=15
+        )
+
+        geocode_response.raise_for_status()
+        geocode_data = geocode_response.json()
+
+        if not geocode_data:
+            return None, "Location not found."
+
+        latitude = float(geocode_data[0]["lat"])
+        longitude = float(geocode_data[0]["lon"])
+
+        # ----------------------------------------------------
+        # 2. Search nearby banks using Overpass
+        # ----------------------------------------------------
+        overpass_url = "https://overpass-api.de/api/interpreter"
+
+        query = f"""
+        [out:json][timeout:25];
+        (
+          node["amenity"="bank"](around:{radius},{latitude},{longitude});
+          way["amenity"="bank"](around:{radius},{latitude},{longitude});
+          relation["amenity"="bank"](around:{radius},{latitude},{longitude});
+        );
+        out center tags;
+        """
+
+        overpass_response = requests.post(
+            overpass_url,
+            data=query,
+            headers=headers,
+            timeout=30
+        )
+
+        overpass_response.raise_for_status()
+        bank_data = overpass_response.json()
+
+        results = []
+
+        # ----------------------------------------------------
+        # 3. Extract available bank information
+        # ----------------------------------------------------
+        for element in bank_data.get("elements", []):
+
+            tags = element.get("tags", {})
+
+            name = (
+                tags.get("name")
+                or tags.get("brand")
+                or tags.get("operator")
+                or "Bank"
+            )
+
+            if bank_name:
+                if bank_name.lower() not in name.lower():
+                    continue
+
+            lat = element.get("lat")
+            lon = element.get("lon")
+
+            if lat is None or lon is None:
+                center = element.get("center", {})
+                lat = center.get("lat")
+                lon = center.get("lon")
+
+            address_parts = [
+                tags.get("addr:housenumber"),
+                tags.get("addr:street"),
+                tags.get("addr:suburb"),
+                tags.get("addr:city"),
+                tags.get("addr:state"),
+                tags.get("addr:postcode")
+            ]
+
+            address = ", ".join(
+                str(x) for x in address_parts if x
+            )
+
+            results.append({
+                "Bank Name": name,
+                "Branch": tags.get("branch", "Not available"),
+                "Address": address or "Not available",
+                "Phone": (
+                    tags.get("phone")
+                    or tags.get("contact:phone")
+                    or "Not available"
+                ),
+                "Opening Hours": tags.get(
+                    "opening_hours",
+                    "Not available"
+                ),
+                "Services": tags.get(
+                    "service",
+                    "Not specified"
+                ),
+                "ATM": tags.get(
+                    "atm",
+                    "Not specified"
+                ),
+                "Website": tags.get(
+                    "website",
+                    "Not available"
+                ),
+                "Latitude": lat,
+                "Longitude": lon
+            })
+
+        return results, {
+            "latitude": latitude,
+            "longitude": longitude,
+            "location": geocode_data[0].get(
+                "display_name",
+                location_text
+            )
+        }
+
+    except requests.exceptions.RequestException as e:
+        return None, f"Bank search service error: {e}"
+
+    except Exception as e:
+        return None, f"Unexpected bank search error: {e}"
+
 
 # ============================================================
 # COMMON UI
@@ -292,7 +455,6 @@ def show_healthcare():
         if st.button("🔎 Search Hospital Details", key="health_hospital_search"):
             if hospital_name.strip():
                 try:
-                    import requests
 
                     response = requests.get(
                         "https://nominatim.openstreetmap.org/search",
@@ -1037,6 +1199,153 @@ def show_banking():
             f"Amount: ₹{key_record['Transaction_Amount']:,.0f} | "
             f"Branch: {key_record['Branch']}"
         )
+
+
+    # --------------------------------------------------------
+    # NEARBY BANK IDENTIFICATION
+    # --------------------------------------------------------
+
+    st.markdown("---")
+    st.markdown("### 📍 Find Nearby Bank Branches")
+
+    st.info(
+        "Enter an area, city, location or PIN code to identify "
+        "nearby bank branches and available branch details."
+    )
+
+    b1, b2 = st.columns(2)
+
+    with b1:
+        search_location = st.text_input(
+            "📍 Enter Location / Area / City / PIN",
+            placeholder="Example: Kadapa, Andhra Pradesh"
+        )
+
+    with b2:
+        search_bank = st.text_input(
+            "🏦 Bank Name (Optional)",
+            placeholder="Example: SBI"
+        )
+
+    search_button = st.button(
+        "🔎 Find Nearby Banks",
+        type="primary",
+        key="nearby_bank_search"
+    )
+
+    if search_button:
+
+        if not search_location.strip():
+            st.warning(
+                "Please enter a location, area, city or PIN code."
+            )
+
+        else:
+
+            with st.spinner(
+                "Searching for nearby bank branches..."
+            ):
+
+                bank_results, search_info = search_nearby_banks(
+                    search_location.strip(),
+                    search_bank.strip()
+                )
+
+            if bank_results is None:
+
+                st.error(
+                    f"❌ {search_info}"
+                )
+
+            elif not bank_results:
+
+                st.warning(
+                    "No bank branches were found for the "
+                    "entered location."
+                )
+
+            else:
+
+                st.success(
+                    f"✅ Found {len(bank_results)} bank branch(es) "
+                    f"near the searched location."
+                )
+
+                if isinstance(search_info, dict):
+
+                    st.caption(
+                        f"📍 Search location: "
+                        f"{search_info.get('location', search_location)}"
+                    )
+
+                # --------------------------------------------
+                # Display bank cards
+                # --------------------------------------------
+
+                for index, bank in enumerate(bank_results):
+
+                    st.markdown("---")
+
+                    st.markdown(
+                        f"#### 🏦 {bank['Bank Name']}"
+                    )
+
+                    c1, c2, c3 = st.columns(3)
+
+                    c1.write(
+                        f"**Branch:** "
+                        f"{bank['Branch']}"
+                    )
+
+                    c2.write(
+                        f"**Phone:** "
+                        f"{bank['Phone']}"
+                    )
+
+                    c3.write(
+                        f"**ATM:** "
+                        f"{bank['ATM']}"
+                    )
+
+                    st.write(
+                        f"📍 **Address:** "
+                        f"{bank['Address']}"
+                    )
+
+                    st.write(
+                        f"🕒 **Opening Hours:** "
+                        f"{bank['Opening Hours']}"
+                    )
+
+                    st.write(
+                        f"🛠️ **Services:** "
+                        f"{bank['Services']}"
+                    )
+
+                    if bank["Website"] != "Not available":
+
+                        st.markdown(
+                            f"🌐 **Website:** "
+                            f"[Open Website]({bank['Website']})"
+                        )
+
+                    if (
+                        bank["Latitude"] is not None
+                        and bank["Longitude"] is not None
+                    ):
+
+                        st.caption(
+                            f"Coordinates: "
+                            f"{bank['Latitude']}, "
+                            f"{bank['Longitude']}"
+                        )
+
+    st.caption(
+        "Bank branch information is obtained from "
+        "OpenStreetMap public map data. "
+        "Availability of phone numbers, hours and services "
+        "depends on the mapped information."
+    )
 
     # --------------------------------------------------------
     # CSV UPLOAD
