@@ -748,8 +748,47 @@ def show_retail():
         anomalies = retail_df[retail_df["Anomaly"] != "Normal"]
 
         if not anomalies.empty:
+            # Build a styled copy so this table follows the dashboard's dark theme.
+            anomaly_table = anomalies[
+                ["Date", "City", "Product", "Sales", "Quantity", "Anomaly"]
+            ].copy()
+            anomaly_table["Sales"] = anomaly_table["Sales"].map(
+                lambda value: f"₹{value:,.0f}"
+            )
+
+            styled_anomaly_table = anomaly_table.style.set_properties(
+                **{
+                    "background-color": "#0B1B34",
+                    "color": "#EAF2FF",
+                    "border-color": "#294568",
+                    "text-align": "left",
+                }
+            ).set_table_styles([
+                {
+                    "selector": "th",
+                    "props": [
+                        ("background-color", "#16345B"),
+                        ("color", "#FFFFFF"),
+                        ("font-weight", "bold"),
+                        ("border-color", "#294568"),
+                    ],
+                },
+                {
+                    "selector": "td",
+                    "props": [
+                        ("background-color", "#0B1B34"),
+                        ("color", "#EAF2FF"),
+                        ("border-color", "#294568"),
+                    ],
+                },
+                {
+                    "selector": "tbody tr:nth-child(even) td",
+                    "props": [("background-color", "#102440")],
+                },
+            ])
+
             st.dataframe(
-                anomalies[["Date", "City", "Product", "Sales", "Quantity", "Anomaly"]],
+                styled_anomaly_table,
                 use_container_width=True,
                 hide_index=True
             )
