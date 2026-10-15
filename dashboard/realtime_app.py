@@ -9,6 +9,26 @@ from datetime import datetime
 from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+
+def style_chart(fig, height=360, money_axis=False):
+    """Apply a consistent, polished dark theme to Plotly charts."""
+    fig.update_layout(
+        template="plotly_dark",
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(10,20,42,0.55)",
+        font=dict(family="Arial, sans-serif", color="#E8F0FF", size=12),
+        title=dict(font=dict(size=17, color="#F4F7FF"), x=0.02, xanchor="left"),
+        margin=dict(l=18, r=18, t=62, b=24),
+        hoverlabel=dict(bgcolor="#101D38", font_color="#FFFFFF", bordercolor="#35C9FF"),
+        legend=dict(bgcolor="rgba(0,0,0,0)", orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+    )
+    fig.update_xaxes(showgrid=False, zeroline=False, linecolor="rgba(150,180,220,0.25)")
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(150,180,220,0.12)", zeroline=False)
+    if money_axis:
+        fig.update_yaxes(tickprefix="₹", separatethousands=True)
+    return fig
+
 # ============================================================
 # PAGE CONFIGURATION
 # ============================================================
@@ -468,12 +488,16 @@ def show_healthcare():
 
         with right:
             st.subheader("💰 Treatment Cost by Department")
-            cost_by_department = healthcare_df.groupby("Department")["Treatment_Cost"].sum()
-            st.bar_chart(cost_by_department)
+            cost_by_department = healthcare_df.groupby("Department", as_index=False)["Treatment_Cost"].sum().sort_values("Treatment_Cost", ascending=True)
+            fig = px.bar(cost_by_department, x="Treatment_Cost", y="Department", orientation="h", text="Treatment_Cost", color="Department", color_discrete_sequence=px.colors.qualitative.Bold, title="Treatment cost comparison")
+            fig.update_traces(texttemplate="₹%{text:,.0f}", textposition="outside", cliponaxis=False, marker_line_width=0, opacity=0.92)
+            st.plotly_chart(style_chart(fig, height=340, money_axis=True), use_container_width=True)
 
         st.subheader("🛏️ Length of Stay Analysis")
-        stay_by_department = healthcare_df.groupby("Department")["Length_of_Stay"].mean()
-        st.bar_chart(stay_by_department)
+        stay_by_department = healthcare_df.groupby("Department", as_index=False)["Length_of_Stay"].mean().sort_values("Length_of_Stay", ascending=True)
+        fig = px.bar(stay_by_department, x="Length_of_Stay", y="Department", orientation="h", text="Length_of_Stay", color="Department", color_discrete_sequence=px.colors.qualitative.Pastel, title="Average stay by department")
+        fig.update_traces(texttemplate="%{text:.1f} days", textposition="outside", cliponaxis=False, marker_line_width=0)
+        st.plotly_chart(style_chart(fig, height=330), use_container_width=True)
         st.caption(f"Overall average length of stay: {average_stay:.2f} days")
 
         st.subheader("⚠️ Automatic Anomaly & High-Risk Detection")
@@ -638,12 +662,19 @@ def show_retail():
         with left:
             st.subheader("🏙️ City-wise Sales")
             city_sales = retail_df.groupby("City")["Sales"].sum().sort_values(ascending=False)
-            st.bar_chart(city_sales)
+            city_chart_df = city_sales.rename_axis("City").reset_index(name="Sales").sort_values("Sales", ascending=True)
+            fig = px.bar(city_chart_df, x="Sales", y="City", orientation="h", text="Sales", color="Sales", color_continuous_scale=["#2563EB", "#22D3EE"], title="Sales by city")
+            fig.update_traces(texttemplate="₹%{text:,.0f}", textposition="outside", cliponaxis=False, marker_line_width=0)
+            fig.update_coloraxes(showscale=False)
+            st.plotly_chart(style_chart(fig, height=340, money_axis=True), use_container_width=True)
 
         with right:
             st.subheader("📦 Product-wise Sales")
             product_sales = retail_df.groupby("Product")["Sales"].sum().sort_values(ascending=False)
-            st.bar_chart(product_sales)
+            product_chart_df = product_sales.rename_axis("Product").reset_index(name="Sales").sort_values("Sales", ascending=True)
+            fig = px.bar(product_chart_df, x="Sales", y="Product", orientation="h", text="Sales", color="Product", color_discrete_sequence=px.colors.qualitative.Vivid, title="Sales by product")
+            fig.update_traces(texttemplate="₹%{text:,.0f}", textposition="outside", cliponaxis=False, marker_line_width=0)
+            st.plotly_chart(style_chart(fig, height=340, money_axis=True), use_container_width=True)
 
         top_city = city_sales.idxmax()
         top_product = product_sales.idxmax()
@@ -656,8 +687,13 @@ def show_retail():
         st.subheader("📈 Sales Trend")
         trend_df = retail_df.copy()
         trend_df["Date"] = pd.to_datetime(trend_df["Date"], errors="coerce")
-        trend_df = trend_df.dropna(subset=["Date"]).groupby("Date")["Sales"].sum()
-        st.line_chart(trend_df)
+        trend_df = trend_df.dropna(subset=["Date"]).groupby("Date", as_index=False)["Sales"].sum().sort_values("Date")
+        if not trend_df.empty:
+            fig = px.area(trend_df, x="Date", y="Sales", markers=True, title="Sales over time")
+            fig.update_traces(line=dict(color="#22D3EE", width=3), fillcolor="rgba(34,211,238,0.16)", marker=dict(size=8, color="#A5F3FC"), hovertemplate="%{x|%d %b %Y}<br>Sales: ₹%{y:,.0f}<extra></extra>")
+            st.plotly_chart(style_chart(fig, height=360, money_axis=True), use_container_width=True)
+        else:
+            st.info("No valid dates available to display a sales trend.")
 
         st.subheader("⚠️ Automatic Retail Anomaly Detection")
         sales_mean = retail_df["Sales"].mean()
@@ -980,11 +1016,9 @@ def show_banking():
             markers=True,
             title="Transactions by Date"
         )
-        fig.update_layout(
-            xaxis_title="Date",
-            yaxis_title="Transaction Amount"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_layout(xaxis_title="Date", yaxis_title="Transaction Amount")
+        fig.update_traces(line=dict(color="#22D3EE", width=3), marker=dict(size=8, color="#A78BFA"), fill="tozeroy")
+        st.plotly_chart(style_chart(fig, height=360, money_axis=True), use_container_width=True)
 
     with chart2:
         transaction_summary = (
@@ -1001,7 +1035,8 @@ def show_banking():
             title="Deposits vs Withdrawals",
             text_auto=True
         )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(marker_line_width=0, opacity=0.92, texttemplate="₹%{y:,.0f}", textposition="outside", cliponaxis=False)
+        st.plotly_chart(style_chart(fig, height=360, money_axis=True), use_container_width=True)
 
     chart3, chart4 = st.columns(2)
 
@@ -1020,7 +1055,8 @@ def show_banking():
             title="Transactions by Account Type",
             text_auto=True
         )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(marker_line_width=0, opacity=0.92, texttemplate="₹%{y:,.0f}", textposition="outside", cliponaxis=False)
+        st.plotly_chart(style_chart(fig, height=360, money_axis=True), use_container_width=True)
 
     with chart4:
         city_summary = (
@@ -1038,7 +1074,8 @@ def show_banking():
             title="Transactions by City",
             text_auto=True
         )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(marker_line_width=0, opacity=0.92, texttemplate="₹%{y:,.0f}", textposition="outside", cliponaxis=False)
+        st.plotly_chart(style_chart(fig, height=360, money_axis=True), use_container_width=True)
 
     chart5, chart6 = st.columns(2)
 
@@ -1056,7 +1093,8 @@ def show_banking():
             values="Loan_Amount",
             title="Loan Distribution"
         )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(textposition="inside", textinfo="percent+label", marker=dict(line=dict(color="#0B1530", width=2)))
+        st.plotly_chart(style_chart(fig, height=360), use_container_width=True)
 
     with chart6:
         branch_summary = (
@@ -1074,7 +1112,8 @@ def show_banking():
             title="Branch-wise Transaction Volume",
             text_auto=True
         )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.update_traces(marker_line_width=0, opacity=0.92, texttemplate="₹%{y:,.0f}", textposition="outside", cliponaxis=False)
+        st.plotly_chart(style_chart(fig, height=360, money_axis=True), use_container_width=True)
 
     # --------------------------------------------------------
     # CUSTOMER ACTIVITY
@@ -1571,7 +1610,12 @@ def show_education():
         Records=("Student_ID", "count")
     ).reset_index().round(2)
     st.dataframe(subject_analysis, use_container_width=True, hide_index=True)
-    st.bar_chart(subject_analysis.set_index("Subject")["Average_Marks"])
+    subject_chart_df = subject_analysis.sort_values("Average_Marks", ascending=True)
+    fig = px.bar(subject_chart_df, x="Average_Marks", y="Subject", orientation="h", text="Average_Marks", color="Average_Marks", color_continuous_scale=["#8B5CF6", "#22D3EE", "#34D399"], title="Average marks by subject")
+    fig.update_traces(texttemplate="%{text:.1f}/100", textposition="outside", cliponaxis=False, marker_line_width=0)
+    fig.update_xaxes(range=[0, max(100, float(subject_chart_df["Average_Marks"].max()) * 1.15)])
+    fig.update_coloraxes(showscale=False)
+    st.plotly_chart(style_chart(fig, height=340), use_container_width=True)
 
     # Low-performance detection
     st.subheader("🔎 Low-Performance Student Detection")
