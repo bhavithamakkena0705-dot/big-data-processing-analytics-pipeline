@@ -13,10 +13,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # PAGE CONFIGURATION
 # ============================================================
 st.set_page_config(
-    page_title="BIG DATA PROCESSING & ANALYTICAL PIPELINE",
+    page_title="Big Data Processing & Analytics Pipeline",
     page_icon="📊",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # ============================================================
@@ -197,29 +197,95 @@ def search_nearby_banks(location_text, bank_name="", radius=10000):
 # ============================================================
 st.markdown("""
 <style>
+:root {
+    --bg-main: #071226;
+    --bg-card: rgba(13, 31, 62, .82);
+    --line: rgba(77, 151, 255, .28);
+    --text-main: #eef5ff;
+    --text-muted: #a9bddb;
+}
+.stApp {
+    background:
+        radial-gradient(ellipse at 8% 0%, rgba(28, 94, 190, .23), transparent 35%),
+        radial-gradient(ellipse at 95% 12%, rgba(120, 55, 190, .18), transparent 30%),
+        linear-gradient(135deg, #050d1d 0%, #08172e 52%, #071126 100%);
+    color: var(--text-main);
+}
+[data-testid="stHeader"] { background: rgba(4, 13, 29, .72); }
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #07152c 0%, #0b1e3b 100%);
+    border-right: 1px solid var(--line);
+}
+[data-testid="stSidebar"] * { color: #e7f0ff; }
+.block-container { padding-top: 1.7rem; padding-bottom: 2.5rem; max-width: 1500px; }
+h1, h2, h3 { color: #f4f8ff !important; letter-spacing: -.025em; }
+h1 { font-weight: 800 !important; }
+h2, h3 { font-weight: 700 !important; }
+p, label, .stMarkdown, [data-testid="stCaptionContainer"] { color: #d0def4; }
 .domain-card {
-    padding: 24px;
-    border: 1px solid rgba(128,128,128,.25);
-    border-radius: 18px;
-    min-height: 245px;
-    background: rgba(128,128,128,.06);
-    margin-bottom: 10px;
+    padding: 24px 21px;
+    border: 1px solid rgba(95, 157, 255, .35);
+    border-radius: 20px;
+    min-height: 255px;
+    background: linear-gradient(145deg, rgba(19, 49, 94, .92), rgba(11, 25, 52, .94));
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255,255,255,.04);
+    margin-bottom: 12px;
+    transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
-.domain-icon {
-    font-size: 48px;
+.domain-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(75, 205, 255, .8);
+    box-shadow: 0 16px 34px rgba(0, 120, 255, .15);
 }
-.domain-title {
-    font-size: 25px;
-    font-weight: 700;
-    margin-top: 8px;
-}
-.domain-text {
-    min-height: 65px;
-    color: #777;
-}
+.domain-icon { font-size: 44px; filter: drop-shadow(0 0 12px rgba(63, 159, 255, .25)); }
+.domain-title { font-size: 22px; font-weight: 800; margin-top: 9px; color: #f5f8ff; }
+.domain-text { min-height: 78px; color: #b7c9e5; line-height: 1.55; font-size: 14px; }
 .dashboard-header {
-    padding: 8px 0 18px 0;
+    padding: 22px 25px 20px 25px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(70, 151, 255, .3);
+    border-radius: 20px;
+    background: linear-gradient(110deg, rgba(13, 43, 87, .92), rgba(19, 31, 73, .75));
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .16);
 }
+.dashboard-header h1 { margin-bottom: .25rem; }
+[data-testid="stMetric"] {
+    background: linear-gradient(145deg, rgba(19, 47, 91, .88), rgba(12, 27, 56, .92));
+    border: 1px solid rgba(83, 153, 255, .32);
+    padding: 17px 18px;
+    border-radius: 17px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .13);
+}
+[data-testid="stMetricLabel"] { color: #b8cbed !important; }
+[data-testid="stMetricValue"] { color: #f4f8ff !important; font-weight: 800; }
+.stButton > button {
+    border: 1px solid rgba(95, 170, 255, .55);
+    border-radius: 12px;
+    color: #f7fbff;
+    background: linear-gradient(110deg, #174aa2, #2868d8);
+    font-weight: 700;
+    transition: all .18s ease;
+}
+.stButton > button:hover {
+    border-color: #72e2ff;
+    color: white;
+    background: linear-gradient(110deg, #2162c8, #4a54db);
+    box-shadow: 0 7px 20px rgba(36, 111, 255, .24);
+    transform: translateY(-1px);
+}
+[data-testid="stDataFrame"], [data-testid="stTable"] {
+    border: 1px solid rgba(83, 153, 255, .24);
+    border-radius: 13px;
+    overflow: hidden;
+}
+[data-testid="stAlert"] { border-radius: 13px; }
+[data-baseweb="input"] > div, [data-baseweb="select"] > div,
+[data-testid="stFileUploader"] section {
+    background: rgba(11, 28, 56, .9);
+    border-color: rgba(93, 151, 235, .35);
+    border-radius: 11px;
+}
+hr { border-color: rgba(92, 151, 231, .22); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -238,8 +304,8 @@ def back_button():
 # DOMAIN SELECTION HOME PAGE
 # ============================================================
 def show_home():
-    st.title("📊 Multi-Domain Big Data Analytics System")
-    st.subheader("Big Data Processing, Real-Time Analytics & Intelligent Insights")
+    st.title("🚀 Big Data Processing & Analytics Pipeline")
+    st.subheader("Real-Time Intelligence • Multi-Domain Analytics • Smart Insights")
     st.write(
         "Select a domain to open its dedicated analytics dashboard. "
         "Each domain is processed and displayed independently."
