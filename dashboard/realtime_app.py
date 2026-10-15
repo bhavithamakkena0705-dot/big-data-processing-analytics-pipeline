@@ -1824,18 +1824,155 @@ with st.sidebar:
         st.rerun()
 
 # ============================================================
+# LOGIN / REGISTRATION AUTHENTICATION
+# ============================================================
+import csv
+import hashlib
+import hmac
+import secrets
+
+USERS_FILE = PROJECT_ROOT / "users.csv"
+USER_FIELDS = ["Full_Name", "Username", "Email", "Password_Hash", "Salt"]
+
+
+def load_users():
+    if not USERS_FILE.exists():
+        return []
+    try:
+        with USERS_FILE.open("r", newline="", encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+    except (OSError, csv.Error):
+        return []
+
+
+def save_user(full_name, username, email, password):
+    users = load_users()
+    if any(u.get("Username", "").casefold() == username.casefold() for u in users):
+        return False, "That username is already registered. Please choose another."
+    if any(u.get("Email", "").casefold() == email.casefold() for u in users):
+        return False, "That email is already registered. Please log in instead."
+    salt = secrets.token_hex(16)
+    password_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 200000).hex()
+    try:
+        file_exists = USERS_FILE.exists()
+        with USERS_FILE.open("a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=USER_FIELDS)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerow({"Full_Name": full_name.strip(), "Username": username.strip(), "Email": email.strip(), "Password_Hash": password_hash, "Salt": salt})
+        return True, "Account created successfully. You can now log in."
+    except OSError:
+        return False, "Could not save the account. Check the app's file permissions and try again."
+
+
+def check_login(username, password):
+    for user in load_users():
+        if user.get("Username", "").casefold() == username.strip().casefold():
+            salt = user.get("Salt", "")
+            expected = user.get("Password_Hash", "")
+            actual = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 200000).hex()
+            return hmac.compare_digest(actual, expected), user.get("Full_Name") or username
+    return False, ""
+
+
+def show_authentication():
+    st.markdown("""
+    <style>
+    .stApp { background: radial-gradient(circle at 12% 10%, #142b52 0, #081326 38%, #050b16 100%); }
+    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    .auth-title { text-align:center; font-size:2.15rem; font-weight:800; color:#f4f8ff; margin:0.2rem 0; }
+    .auth-subtitle { text-align:center; color:#9db5d8; margin-bottom:1.4rem; }
+    .auth-pill { text-align:center; color:#65d8ff; font-size:.85rem; letter-spacing:2px; font-weight:700; }
+    [data-testid="stForm"] { background:rgba(14,29,54,.92); border:1px solid #28476f; border-radius:18px; padding:1.3rem; }
+    div[data-baseweb="tab-list"] { gap:8px; justify-content:center; }
+    button[data-baseweb="tab"] { background:#10223e; border-radius:10px 10px 0 0; color:#dbeafe; padding:10px 24px; }
+    button[data-baseweb="tab"][aria-selected="true"] { background:#164e82; color:white; }
+    div.stButton > button[kind="primaryFormSubmit"], div.stButton > button[kind="primary"] { background:linear-gradient(90deg,#087cae,#6657d9); color:white; border:0; border-radius:10px; font-weight:700; }
+    </style>
+    <div class="auth-pill">BIG DATA • REAL-TIME • INTELLIGENCE</div>
+    <div class="auth-title">Big Data Processing &amp; Analytics Pipeline</div>
+    <div class="auth-subtitle">Sign in or create an account to explore all four analytics domains.</div>
+    """, unsafe_allow_html=True)
+
+    left, center, right = st.columns([1, 1.15, 1])
+    with center:
+        login_tab, register_tab = st.tabs(["🔐 Login", "📝 Create Account"])
+        with login_tab:
+            with st.form("login_form", clear_on_submit=False):
+                st.markdown("### Welcome back")
+                login_username = st.text_input("Username", key="login_username", placeholder="Enter your username")
+                login_password = st.text_input("Password", type="password", key="login_password", placeholder="Enter your password")
+                submitted = st.form_submit_button("Login", type="primary", use_container_width=True)
+                if submitted:
+                    ok, full_name = check_login(login_username, login_password)
+                    if ok:
+                        st.session_state.authenticated = True
+                        st.session_state.username = login_username.strip()
+                        st.session_state.full_name = full_name
+                        st.rerun()
+                    else:
+                        st.error("Invalid username or password.")
+        with register_tab:
+            with st.form("register_form", clear_on_submit=True):
+                st.markdown("### Create your account")
+                full_name = st.text_input("Full name", placeholder="Enter your full name")
+                new_username = st.text_input("Username", placeholder="Choose a username")
+                email = st.text_input("Email", placeholder="name@example.com")
+                new_password = st.text_input("Password", type="password", placeholder="At least 8 characters")
+                confirm_password = st.text_input("Confirm password", type="password", placeholder="Re-enter your password")
+                registered = st.form_submit_button("Create Account", type="primary", use_container_width=True)
+                if registered:
+                    if not all([full_name.strip(), new_username.strip(), email.strip(), new_password, confirm_password]):
+                        st.error("Please fill in all fields.")
+                    elif "@" not in email or "." not in email.rsplit("@", 1)[-1]:
+                        st.error("Please enter a valid email address.")
+                    elif len(new_username.strip()) < 3:
+                        st.error("Username must contain at least 3 characters.")
+                    elif len(new_password) < 8:
+                        st.error("Password must contain at least 8 characters.")
+                    elif new_password != confirm_password:
+                        st.error("Passwords do not match.")
+                    else:
+                        ok, message = save_user(full_name, new_username, email, new_password)
+                        if ok:
+                            st.success(message)
+                        else:
+                            st.error(message)
+    st.markdown("<p style='text-align:center;color:#7892b8;font-size:.8rem;margin-top:1.5rem'>Secure password hashing enabled • Healthcare • Retail • Education • Banking</p>", unsafe_allow_html=True)
+
+
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if "full_name" not in st.session_state:
+    st.session_state.full_name = ""
+
+
+# ============================================================
 # ROUTER
 # ============================================================
-if st.session_state.selected_domain is None:
-    show_home()
-elif st.session_state.selected_domain == "healthcare":
-    show_healthcare()
-elif st.session_state.selected_domain == "retail":
-    show_retail()
-elif st.session_state.selected_domain == "education":
-    show_education()
-elif st.session_state.selected_domain == "banking":
-    show_banking()
+if not st.session_state.authenticated:
+    show_authentication()
 else:
-    go_home()
-    st.rerun()
+    with st.sidebar:
+        st.markdown(f"### 👋 Hello, {st.session_state.full_name or st.session_state.username}")
+        if st.button("🚪 Logout", use_container_width=True):
+            st.session_state.authenticated = False
+            st.session_state.username = ""
+            st.session_state.full_name = ""
+            st.session_state.selected_domain = None
+            st.rerun()
+    if st.session_state.selected_domain is None:
+        show_home()
+    elif st.session_state.selected_domain == "healthcare":
+        show_healthcare()
+    elif st.session_state.selected_domain == "retail":
+        show_retail()
+    elif st.session_state.selected_domain == "education":
+        show_education()
+    elif st.session_state.selected_domain == "banking":
+        show_banking()
+    else:
+        go_home()
+        st.rerun()
