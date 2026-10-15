@@ -787,10 +787,48 @@ def show_retail():
                 },
             ])
 
-            st.dataframe(
-                styled_anomaly_table,
-                use_container_width=True,
-                hide_index=True
+            # Render as a real HTML table instead of Streamlit's canvas-based
+            # dataframe, which can ignore cell background styling in some versions.
+            styled_anomaly_table = styled_anomaly_table.set_table_styles([
+                {
+                    "selector": "table",
+                    "props": [
+                        ("width", "100%"),
+                        ("border-collapse", "separate"),
+                        ("border-spacing", "0"),
+                        ("border-radius", "12px"),
+                        ("overflow", "hidden"),
+                        ("font-size", "14px"),
+                        ("background-color", "#0B1B34"),
+                    ],
+                },
+                {
+                    "selector": "th",
+                    "props": [
+                        ("background-color", "#16345B"),
+                        ("color", "#FFFFFF"),
+                        ("padding", "12px"),
+                        ("text-align", "left"),
+                        ("border", "1px solid #294568"),
+                    ],
+                },
+                {
+                    "selector": "td",
+                    "props": [
+                        ("background-color", "#0B1B34"),
+                        ("color", "#EAF2FF"),
+                        ("padding", "11px 12px"),
+                        ("border", "1px solid #294568"),
+                    ],
+                },
+                {
+                    "selector": "tbody tr:nth-child(even) td",
+                    "props": [("background-color", "#102440")],
+                },
+            ], overwrite=True)
+            st.markdown(
+                styled_anomaly_table.to_html(index=False),
+                unsafe_allow_html=True,
             )
         else:
             st.success("No retail sales anomalies detected.")
