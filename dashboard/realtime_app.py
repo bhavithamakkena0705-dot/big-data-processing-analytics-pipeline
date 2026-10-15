@@ -6,12 +6,14 @@ import pandas as pd
 import os
 import glob
 from datetime import datetime
+from pathlib import Path
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # ============================================================
 # PAGE CONFIGURATION
 # ============================================================
 st.set_page_config(
-    page_title="Multi-Domain Big Data Analytics System",
+    page_title="BIG DATA PROCESSING & ANALYTICAL PIPELINE",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -346,7 +348,7 @@ def show_healthcare():
     back_button()
     st.markdown("---")
 
-    healthcare_file = "/content/big_data_project/data/domains/healthcare/healthcare_data.csv"
+    healthcare_file = PROJECT_ROOT / "data" / "domains" / "healthcare" / "healthcare_data.csv"
 
     try:
         healthcare_df = pd.read_csv(healthcare_file)
@@ -549,7 +551,7 @@ def show_retail():
     back_button()
     st.markdown("---")
 
-    retail_file = "/content/big_data_project/data/domains/retail/retail_sales.csv"
+    retail_file = PROJECT_ROOT / "data" / "domains" / "retail" / "retail_sales.csv"
 
     try:
         retail_df = pd.read_csv(retail_file)
@@ -719,10 +721,7 @@ def show_banking():
         "Anomaly Detection • Location-Based Bank Identification"
     )
 
-    banking_file = (
-        "/content/big_data_project/"
-        "data/domains/banking/banking_data.csv"
-    )
+    banking_file = PROJECT_ROOT / "data" / "domains" / "banking" / "banking_data.csv"
 
     try:
         banking_df = pd.read_csv(banking_file)
@@ -1420,8 +1419,8 @@ def show_education():
     # Real-time refresh is used only on the Education dashboard.
     st_autorefresh(interval=3000, key="education_realtime_refresh")
 
-    input_folder = "/content/big_data_project/realtime/input"
-    files = glob.glob(os.path.join(input_folder, "*.csv"))
+    input_folder = PROJECT_ROOT / "realtime" / "input"
+    files = [str(path) for path in input_folder.glob("*.csv")]
 
     if not files:
         st.warning("Waiting for real-time student data...")
