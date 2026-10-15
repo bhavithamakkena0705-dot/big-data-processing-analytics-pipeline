@@ -951,6 +951,21 @@ def show_banking():
         st.error(f"Unable to load banking dataset: {e}")
         return
 
+    # Support the actual project CSV column names as well as normalized names.
+    if "Transaction_Amount" not in banking_df.columns and "Amount" in banking_df.columns:
+        banking_df["Transaction_Amount"] = banking_df["Amount"]
+    if "Transaction_Type" not in banking_df.columns and "Type" in banking_df.columns:
+        banking_df["Transaction_Type"] = banking_df["Type"]
+    if "Branch" not in banking_df.columns:
+        if "City" in banking_df.columns:
+            banking_df["Branch"] = banking_df["City"]
+        else:
+            banking_df["Branch"] = "Unknown"
+    if "Loan_Amount" not in banking_df.columns:
+        banking_df["Loan_Amount"] = 0
+    if "Date" not in banking_df.columns:
+        banking_df["Date"] = pd.NaT
+
     banking_df["Date"] = pd.to_datetime(
         banking_df["Date"], errors="coerce"
     )
@@ -1664,6 +1679,11 @@ def show_education():
 
     df = pd.concat(dataframes, ignore_index=True)
 
+    # Support both the stream's Branch column and the static dataset's Class column.
+    if "Branch" not in df.columns and "Class" in df.columns:
+        df["Branch"] = df["Class"]
+    if "Student_ID" not in df.columns and "StudentID" in df.columns:
+        df["Student_ID"] = df["StudentID"]
     required = {"Student_ID", "Branch", "Subject", "Marks", "Attendance"}
     if not required.issubset(df.columns):
         st.error(
@@ -1779,6 +1799,29 @@ def show_education():
         f"Last dashboard update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} "
         "| Auto-refresh: 3 seconds"
     )
+
+# ============================================================
+# PERSISTENT SIDEBAR NAVIGATION
+# ============================================================
+with st.sidebar:
+    st.markdown("## 📊 Big Data Pipeline")
+    st.caption("Navigate between all four domains")
+    if st.button("🏠 Home / All Domains", key="nav_home", use_container_width=True):
+        go_home()
+        st.rerun()
+    st.markdown("---")
+    if st.button("🏥 Healthcare", key="nav_healthcare", use_container_width=True):
+        open_domain("healthcare")
+        st.rerun()
+    if st.button("🛒 Retail", key="nav_retail", use_container_width=True):
+        open_domain("retail")
+        st.rerun()
+    if st.button("🎓 Education", key="nav_education", use_container_width=True):
+        open_domain("education")
+        st.rerun()
+    if st.button("🏦 Banking", key="nav_banking", use_container_width=True):
+        open_domain("banking")
+        st.rerun()
 
 # ============================================================
 # ROUTER
