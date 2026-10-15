@@ -293,10 +293,53 @@ p, label, .stMarkdown, [data-testid="stCaptionContainer"] { color: #d0def4; }
     box-shadow: 0 7px 20px rgba(36, 111, 255, .24);
     transform: translateY(-1px);
 }
+/* Dark, readable tables across all four domains */
 [data-testid="stDataFrame"], [data-testid="stTable"] {
-    border: 1px solid rgba(83, 153, 255, .24);
-    border-radius: 13px;
-    overflow: hidden;
+    background: #0b1b34 !important;
+    color: #eaf2ff !important;
+    border: 1px solid rgba(83, 153, 255, .34) !important;
+    border-radius: 13px !important;
+    overflow: hidden !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
+}
+/* Streamlit's interactive dataframe uses a canvas; set its supported theme variables. */
+[data-testid="stDataFrame"] [class*="glideDataEditor"],
+[data-testid="stDataFrame"] [class*="gdg-"] {
+    --gdg-bg-cell: #0b1b34;
+    --gdg-bg-cell-medium: #102544;
+    --gdg-bg-header: #142d50;
+    --gdg-bg-header-has-focus: #1b3b67;
+    --gdg-bg-header-hovered: #1b3b67;
+    --gdg-text-dark: #eaf2ff;
+    --gdg-text-medium: #c6d8f2;
+    --gdg-text-light: #a9c0e2;
+    --gdg-border-color: rgba(104, 157, 230, .24);
+    --gdg-accent-color: #38bdf8;
+    --gdg-link-color: #67e8f9;
+}
+/* Regular HTML tables, including st.table */
+[data-testid="stTable"] table {
+    background: #0b1b34 !important;
+    color: #eaf2ff !important;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    width: 100% !important;
+}
+[data-testid="stTable"] thead tr th {
+    background: #16345b !important;
+    color: #f4f8ff !important;
+    border-bottom: 1px solid rgba(104, 157, 230, .35) !important;
+}
+[data-testid="stTable"] tbody tr td {
+    background: #0b1b34 !important;
+    color: #dce9fb !important;
+    border-bottom: 1px solid rgba(104, 157, 230, .15) !important;
+}
+[data-testid="stTable"] tbody tr:nth-child(even) td {
+    background: #102440 !important;
+}
+[data-testid="stTable"] tbody tr:hover td {
+    background: #17365c !important;
 }
 [data-testid="stAlert"] { border-radius: 13px; }
 [data-baseweb="input"] > div, [data-baseweb="select"] > div,
