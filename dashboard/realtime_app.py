@@ -1,4 +1,5 @@
 import requests
+import time
 import plotly.express as px
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
@@ -53,163 +54,191 @@ def open_domain(domain):
 
 
 # ============================================================
-# NEARBY BANK SEARCH
+# SHARED OPENSTREETMAP API HELPERS
 # ============================================================
 
-def search_nearby_banks(location_text, bank_name="", radius=10000):
-    """
-    Find nearby bank branches using OpenStreetMap / Overpass.
-    Returns only information available from the public map data.
-    """
+def get_json_with_retry(url, params=None, headers=None, data=None,
+                        method="GET", timeout=25, attempts=3):
+    """Request JSON safely, with bounded retries for temporary API errors."""
+    last_error = "Unknown API error"
 
-    try:
-        headers = {
-            "User-Agent": "BigDataAnalyticsPipeline/1.0"
-        }
+    for attempt in range(attempts):
+        try:
+            if method.upper() == "POST":
+                response = requests.post(
+                    url, data=data, headers=headers, timeout=timeout
+                )
+            else:
+                response = requests.get(
+                    url, params=params, headers=headers, timeout=timeout
+                )
 
-        # ----------------------------------------------------
-        # 1. Convert entered location into latitude/longitude
-        # ----------------------------------------------------
-        geocode_url = "https://nominatim.openstreetmap.org/search"
+            if response.status_code == 429 or response.status_code in (500, 502, 503, 504):
+                last_error = f"Server returned HTTP {response.status_code}"
+                if attempt < attempts - 1:
+                    retry_after = response.headers.get("Retry-After", "")
+                    try:
+                        wait_seconds = min(max(float(retry_after), 1), 30) if retry_after else 2 ** (attempt + 1)
+                    except (TypeError, ValueError):
+                        wait_seconds = 2 ** (attempt + 1)
+                    time.sleep(wait_seconds)
+                    continue
 
-        # Make location search more reliable
-        clean_location = location_text.strip()
+            response.raise_for_status()
+            if not response.text or not response.text.strip():
+                raise ValueError("The map service returned an empty response.")
 
-        if "india" not in clean_location.lower():
-            clean_location = f"{clean_location}, India"
+            try:
+                payload = response.json()
+            except ValueError as exc:
+                content_type = response.headers.get("Content-Type", "unknown")
+                raise ValueError(
+                    f"The map service did not return valid JSON (content type: {content_type})."
+                ) from exc
 
-        geocode_params = {
+            if not isinstance(payload, (dict, list)):
+                raise ValueError("The map service returned an unexpected data format.")
+            return payload
+
+        except (requests.exceptions.RequestException, ValueError) as exc:
+            last_error = str(exc)
+            if attempt < attempts - 1:
+                time.sleep(2 ** (attempt + 1))
+
+    raise RuntimeError(last_error)
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def get_location_coordinates(location_text):
+    """Geocode a location; cache successful results to reduce Nominatim traffic."""
+    clean_location = str(location_text).strip()
+    if not clean_location:
+        return None
+    if "india" not in clean_location.lower():
+        clean_location = f"{clean_location}, India"
+
+    # Nominatim's public service requires a low request rate.
+    time.sleep(1.1)
+    payload = get_json_with_retry(
+        "https://nominatim.openstreetmap.org/search",
+        params={
             "q": clean_location,
             "format": "json",
             "addressdetails": 1,
             "limit": 1
-        }
+        },
+        headers={
+            "User-Agent": "BigDataProcessingAnalyticsPipeline/2.0 (educational project)"
+        },
+        timeout=25,
+        attempts=2
+    )
 
-        geocode_response = requests.get(
-            geocode_url,
-            params=geocode_params,
-            headers=headers,
-            timeout=15
-        )
+    if not isinstance(payload, list) or not payload:
+        return None
 
-        geocode_response.raise_for_status()
-        geocode_data = geocode_response.json()
+    first = payload[0]
+    return {
+        "latitude": float(first["lat"]),
+        "longitude": float(first["lon"]),
+        "location": first.get("display_name", clean_location)
+    }
 
-        if not geocode_data:
-            return None, "Location not found."
 
-        latitude = float(geocode_data[0]["lat"])
-        longitude = float(geocode_data[0]["lon"])
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_nearby_bank_elements(latitude, longitude, radius):
+    """Fetch OSM bank features. Results are cached to avoid repeat requests."""
+    query = f"""
+    [out:json][timeout:25];
+    (
+      node["amenity"="bank"](around:{int(radius)},{latitude},{longitude});
+      way["amenity"="bank"](around:{int(radius)},{latitude},{longitude});
+      relation["amenity"="bank"](around:{int(radius)},{latitude},{longitude});
+    );
+    out center tags;
+    """
+    headers = {
+        "User-Agent": "BigDataProcessingAnalyticsPipeline/2.0 (educational project)"
+    }
+    servers = [
+        "https://overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter"
+    ]
+    errors = []
 
-        # ----------------------------------------------------
-        # 2. Search nearby banks using Overpass
-        # ----------------------------------------------------
-        overpass_url = "https://overpass-api.de/api/interpreter"
-
-        query = f"""
-        [out:json][timeout:25];
-        (
-          node["amenity"="bank"](around:{radius},{latitude},{longitude});
-          way["amenity"="bank"](around:{radius},{latitude},{longitude});
-          relation["amenity"="bank"](around:{radius},{latitude},{longitude});
-        );
-        out center tags;
-        """
-
-        overpass_response = requests.post(
-            overpass_url,
-            data=query,
-            headers=headers,
-            timeout=30
-        )
-
-        overpass_response.raise_for_status()
-        bank_data = overpass_response.json()
-
-        results = []
-
-        # ----------------------------------------------------
-        # 3. Extract available bank information
-        # ----------------------------------------------------
-        for element in bank_data.get("elements", []):
-
-            tags = element.get("tags", {})
-
-            name = (
-                tags.get("name")
-                or tags.get("brand")
-                or tags.get("operator")
-                or "Bank"
+    for server in servers:
+        try:
+            result = get_json_with_retry(
+                server, data=query, headers=headers, method="POST",
+                timeout=40, attempts=2
             )
+            if not isinstance(result, dict) or "elements" not in result:
+                raise ValueError("Overpass returned an unexpected response format.")
+            return result.get("elements", [])
+        except Exception as exc:
+            errors.append(str(exc))
 
-            if bank_name:
-                if bank_name.lower() not in name.lower():
-                    continue
+    raise RuntimeError("All nearby-bank map servers are temporarily unavailable. " + " | ".join(errors))
+
+
+# ============================================================
+# NEARBY BANK SEARCH
+# ============================================================
+
+def search_nearby_banks(location_text, bank_name="", radius=10000):
+    """Find bank branches recorded in OpenStreetMap near the supplied location."""
+    try:
+        if not str(location_text).strip():
+            return None, "Please enter a location."
+
+        location = get_location_coordinates(location_text)
+        if not location:
+            return None, "Location not found. Try a city, area or PIN code with India."
+
+        elements = fetch_nearby_bank_elements(
+            location["latitude"], location["longitude"], int(radius)
+        )
+        results = []
+        search_term = str(bank_name or "").strip().casefold()
+
+        for element in elements:
+            tags = element.get("tags", {})
+            name = tags.get("name") or tags.get("brand") or tags.get("operator") or "Bank"
+
+            if search_term and search_term not in name.casefold():
+                continue
 
             lat = element.get("lat")
             lon = element.get("lon")
-
             if lat is None or lon is None:
                 center = element.get("center", {})
                 lat = center.get("lat")
                 lon = center.get("lon")
 
             address_parts = [
-                tags.get("addr:housenumber"),
-                tags.get("addr:street"),
-                tags.get("addr:suburb"),
-                tags.get("addr:city"),
-                tags.get("addr:state"),
-                tags.get("addr:postcode")
+                tags.get("addr:housenumber"), tags.get("addr:street"),
+                tags.get("addr:suburb"), tags.get("addr:city"),
+                tags.get("addr:state"), tags.get("addr:postcode")
             ]
-
-            address = ", ".join(
-                str(x) for x in address_parts if x
-            )
+            address = ", ".join(str(part) for part in address_parts if part)
 
             results.append({
                 "Bank Name": name,
                 "Branch": tags.get("branch", "Not available"),
                 "Address": address or "Not available",
-                "Phone": (
-                    tags.get("phone")
-                    or tags.get("contact:phone")
-                    or "Not available"
-                ),
-                "Opening Hours": tags.get(
-                    "opening_hours",
-                    "Not available"
-                ),
-                "Services": tags.get(
-                    "service",
-                    "Not specified"
-                ),
-                "ATM": tags.get(
-                    "atm",
-                    "Not specified"
-                ),
-                "Website": tags.get(
-                    "website",
-                    "Not available"
-                ),
+                "Phone": tags.get("phone") or tags.get("contact:phone", "Not available"),
+                "Opening Hours": tags.get("opening_hours", "Not available"),
+                "Services": tags.get("service", "Not specified"),
+                "ATM": tags.get("atm", "Not specified"),
+                "Website": tags.get("website", "Not available"),
                 "Latitude": lat,
                 "Longitude": lon
             })
 
-        return results, {
-            "latitude": latitude,
-            "longitude": longitude,
-            "location": geocode_data[0].get(
-                "display_name",
-                location_text
-            )
-        }
+        return results, location
 
-    except requests.exceptions.RequestException as e:
-        return None, f"Bank search service error: {e}"
-
-    except Exception as e:
-        return None, f"Unexpected bank search error: {e}"
+    except Exception as exc:
+        return None, f"Bank search service error: {exc}"
 
 
 # ============================================================
@@ -467,6 +496,39 @@ def show_home():
     )
 
 # ============================================================
+# HOSPITAL SEARCH HELPER
+# ============================================================
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def search_hospital_osm(hospital_name):
+    """Search public OSM place data for a hospital name; cache for one hour."""
+    clean_name = str(hospital_name).strip()
+    if not clean_name:
+        return []
+
+    query = clean_name if "india" in clean_name.lower() else f"{clean_name}, India"
+    # Respect the public Nominatim service's request-rate guidance.
+    time.sleep(1.1)
+    payload = get_json_with_retry(
+        "https://nominatim.openstreetmap.org/search",
+        params={
+            "q": query,
+            "format": "json",
+            "addressdetails": 1,
+            "limit": 5
+        },
+        headers={
+            "User-Agent": "BigDataProcessingAnalyticsPipeline/2.0 (educational project)"
+        },
+        timeout=25,
+        attempts=2
+    )
+    if not isinstance(payload, list):
+        raise ValueError("Hospital search returned an unexpected response format.")
+    return payload
+
+
+# ============================================================
 # HEALTHCARE DASHBOARD
 # ============================================================
 def show_healthcare():
@@ -583,38 +645,27 @@ def show_healthcare():
 
         hospital_name = st.text_input(
             "Enter Hospital Name",
-            placeholder="Example: RIMS General Hospital",
+            placeholder="Example: RIMS General Hospital, Ongole",
             key="health_hospital_name"
         )
 
         if st.button("🔎 Search Hospital Details", key="health_hospital_search"):
             if hospital_name.strip():
                 try:
-
-                    response = requests.get(
-                        "https://nominatim.openstreetmap.org/search",
-                        params={
-                            "q": hospital_name.strip(),
-                            "format": "json",
-                            "addressdetails": 1,
-                            "limit": 5
-                        },
-                        headers={"User-Agent": "BigDataAnalyticsDashboard/1.0"},
-                        timeout=15
-                    )
-                    results = response.json()
+                    with st.spinner("Searching public hospital map data..."):
+                        results = search_hospital_osm(hospital_name)
 
                     if results:
                         selected = results[0]
                         display_name = selected.get("display_name", hospital_name)
-                        latitude = selected.get("lat", "Not available")
-                        longitude = selected.get("lon", "Not available")
+                        latitude = selected.get("lat")
+                        longitude = selected.get("lon")
                         address = selected.get("address", {})
 
-                        st.success(f"{len(results)} web result(s) found.")
+                        st.success(f"{len(results)} matching result(s) found.")
                         st.subheader("🏥 Hospital Details")
                         a, b = st.columns(2)
-                        a.metric("Hospital Name", hospital_name)
+                        a.metric("Search Name", hospital_name)
                         a.write("**📍 Location:**", display_name)
                         b.write("**🌐 Data Source:** OpenStreetMap")
                         b.write("**🏷️ Place Type:**", selected.get("type", "Not available"))
@@ -636,20 +687,18 @@ def show_healthcare():
                             hide_index=True
                         )
 
-                        g1, g2 = st.columns(2)
-                        g1.metric("Latitude", latitude)
-                        g2.metric("Longitude", longitude)
-
-                        try:
+                        if latitude is not None and longitude is not None:
+                            g1, g2 = st.columns(2)
+                            g1.metric("Latitude", latitude)
+                            g2.metric("Longitude", longitude)
+                            st.subheader("🗺️ Hospital Map")
                             st.map(pd.DataFrame({
                                 "latitude": [float(latitude)],
                                 "longitude": [float(longitude)]
                             }))
-                        except Exception:
-                            pass
 
                         if len(results) > 1:
-                            st.subheader("🔎 Other Matching Hospital Results")
+                            st.subheader("🔎 Other Matching Results")
                             st.dataframe(
                                 pd.DataFrame([
                                     {
@@ -664,9 +713,15 @@ def show_healthcare():
                                 hide_index=True
                             )
                     else:
-                        st.warning("No matching hospital data found on the web.")
+                        st.warning(
+                            "No matching hospital was found in OpenStreetMap. "
+                            "Try the official hospital name together with its city."
+                        )
                 except Exception as e:
-                    st.error(f"Hospital web data error: {e}")
+                    st.error(
+                        "Hospital search is temporarily unavailable. "
+                        f"Please try again later. Details: {e}"
+                    )
             else:
                 st.warning("Please enter a hospital name.")
 
